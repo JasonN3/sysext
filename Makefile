@@ -15,7 +15,7 @@ output: all
 
 # Build the erofs image
 %.raw: $$(shell find $$(subst _,/,%))
-	$(eval $@_SOURCE := $(subst _,/,$(subst .erofs,,$@)))
+	$(eval $@_SOURCE := $(subst _,/,$(subst .raw,,$@)))
 	@echo "Making $@ with source $($@_SOURCE)"
 	mkfs.erofs $@ $($@_SOURCE)
 
