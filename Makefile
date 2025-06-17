@@ -20,7 +20,7 @@ encrypted:
 
 # Write keyfile
 keyfile:
-	echo -n '${ENCRYPT_KEY}' > keyfile
+	@echo -n '${ENCRYPT_KEY}' > keyfile
 
 # Encrypt built image
 encrypted/%: % encrypted keyfile
