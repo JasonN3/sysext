@@ -12,21 +12,24 @@ jobs:
   build:
     name: Build Images
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Install make
-        run: sudo apt-get install -y make
+        run: sudo apt-get install -y make luks
 
       - name: Install prereqs
         run: sudo make preqreqs
 
       - name: Run make
-        run: make output -j $(nproc)
+        env:
+          ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }}
+        run: make encrypt -j $(nproc)
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: images
-          path: output/*.raw
+          path: encrypted/*.raw

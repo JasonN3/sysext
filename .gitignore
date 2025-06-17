@@ -1,1 +1,4 @@
-*.erofs
+/*.raw
+/keyfile
+/output
+/encrypted
