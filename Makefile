@@ -1,17 +1,25 @@
-IMAGES := $(patsubst %/,%,$(sort $(dir $(wildcard */*))))
-DIRECTORIES := $(foreach dir,$(subst /,_,$(patsubst %/,%,$(sort $(dir $(wildcard */*/))))),$(dir).erofs)
+DIRECTORIES := $(patsubst %/,%,$(sort $(dir $(wildcard */*))))
+IMAGES := $(foreach dir,$(subst /,_,$(patsubst %/,%,$(sort $(dir $(wildcard */*/))))),$(dir).erofs)
+
+.PHONY: all $(DIRECTORIES) preqreqs clean
+.SECONDEXPANSION:
 
 # Build all images
-all: $(IMAGES)
+all: $(DIRECTORIES)
+
+# Build output directory for GitHub Actions
+output: all
+	mkdir output
+	mv $(IMAGES) output/
 
 # Build the erofs image
-%.erofs:
+%.erofs: $$(shell find $$(subst _,/,%))
 	$(eval $@_SOURCE := $(subst _,/,$(subst .erofs,,$@)))
 	@echo "Making $@ with source $($@_SOURCE)"
 	mkfs.erofs $@ $($@_SOURCE)
 
 # Build all images related to service
-$(IMAGES): % : $(foreach type,conf sys service,$(filter %_$(type).erofs, $(DIRECTORIES)))
+$(DIRECTORIES): % : $(foreach type,conf sys service,$(filter %_$(type).erofs, $(IMAGES)))
 
 # Install prerequisites
 preqreqs:
