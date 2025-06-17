@@ -2,7 +2,7 @@ DIRECTORIES := $(patsubst %/,%,$(sort $(dir $(wildcard */*))))
 TYPES := conf sys service
 IMAGES := $(foreach dir,$(foreach type,$(TYPES),$(subst /,_,$(wildcard $(DIRECTORIES)/$(type)))),$(dir).raw)
 
-.PHONY: all $(DIRECTORIES) encrypt preqreqs clean
+.PHONY: all $(DIRECTORIES) encrypt prereqs clean
 .SECONDEXPANSION:
 
 # Build all images
@@ -16,7 +16,7 @@ encrypt: $(foreach image,$(IMAGES),encrypted/$(image))
 
 # Create encrypted directory
 encrypted:
-	mkdir encrypted
+	mkdir -p encrypted
 
 # Write keyfile
 keyfile:
@@ -25,8 +25,9 @@ keyfile:
 # Encrypt built image
 encrypted/%: % encrypted keyfile
 	@echo Encrypting $@
-	size=$(($(stat -c %s chrony_sys.raw) + 2048)) fallocate -l ${size} $@
-	cryptsetup luksFormat $@ keyfile
+	$(eval $<_SIZE := $(shell stat -c %s $<))
+	fallocate -l $$(( $($<_SIZE) + 16777216)) $@
+	cryptsetup -q luksFormat $@ keyfile
 	sudo cryptsetup -d keyfile open $@ $(subst .raw,,$(subst encrypted/,,$@))
 	sudo dd if=$(subst encrypted/,,$@) of=/dev/mapper/$(subst .raw,,$(subst encrypted/,,$@)) status=progress
 	sudo cryptsetup close $(subst .raw,,$(subst encrypted/,,$@))
@@ -38,8 +39,8 @@ encrypted/%: % encrypted keyfile
 	mkfs.erofs $@ $($@_SOURCE)
 
 # Install prerequisites
-preqreqs:
-	apt install -y erofs-utils
+prereqs:
+	apt install -y erofs-utils cryptsetup-bin
 
 # Clean up generated files
 clean:
