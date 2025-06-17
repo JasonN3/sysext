@@ -10,6 +10,7 @@ on:
 
 jobs:
   build:
+    name: Build Images
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,7 +23,7 @@ jobs:
         run: sudo make preqreqs
 
       - name: Run make
-        run: make
+        run: make output -j $(nproc)
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

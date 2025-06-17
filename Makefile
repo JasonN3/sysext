@@ -1,5 +1,6 @@
 DIRECTORIES := $(patsubst %/,%,$(sort $(dir $(wildcard */*))))
-IMAGES := $(foreach dir,$(subst /,_,$(patsubst %/,%,$(sort $(dir $(wildcard */*/))))),$(dir).erofs)
+TYPES := conf sys service
+IMAGES := $(foreach dir,$(foreach type,$(TYPES),$(subst /,_,$(wildcard $(DIRECTORIES)/$(type)))),$(dir).erofs)
 
 .PHONY: all $(DIRECTORIES) preqreqs clean
 .SECONDEXPANSION:
@@ -19,7 +20,7 @@ output: all
 	mkfs.erofs $@ $($@_SOURCE)
 
 # Build all images related to service
-$(DIRECTORIES): % : $(foreach type,conf sys service,$(filter %_$(type).erofs, $(IMAGES)))
+$(DIRECTORIES): % : $(foreach type,$(TYPES),$(filter %_$(type).erofs, $(IMAGES)))
 
 # Install prerequisites
 preqreqs:
