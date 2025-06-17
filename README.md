@@ -1,2 +1,2 @@
 # sysext
-Systemd-sysext and confext for bootc images
+Builds EROFS images for various extensions to the Fedora_Base image

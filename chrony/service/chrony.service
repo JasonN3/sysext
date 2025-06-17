@@ -1,0 +1,8 @@
+[Unit]
+Description=Connect I2C RTC
+
+[Service]
+ExecStart=/usr/bin/echo pcf8523 0x68 > /sys/class/i2c-adapter/i2c-1/new_device
+
+[Install]
+WantedBy=multi-user.target
