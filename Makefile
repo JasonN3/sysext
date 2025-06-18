@@ -30,12 +30,12 @@ encrypted/%: % encrypted keyfile
 	fallocate -l $$(( $($<_SIZE) + 16777216 + 16384)) $@
 	sudo parted $@ mklabel gpt
 	sudo parted $@ mkpart primary 0% 100%
-	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image
-	sudo cryptsetup -q luksFormat disk_image keyfile
-	sudo cryptsetup -d keyfile open disk_image $(subst .raw,,$<)
+	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image_$<
+	sudo cryptsetup -q luksFormat disk_image_$< keyfile
+	sudo cryptsetup -d keyfile open disk_image_$< $(subst .raw,,$<)
 	sudo dd if=$($<) of=/dev/mapper/$(subst .raw,,$<) status=progress
-	sudo cryptsetup close disk_image
-	sudo losetup -D
+	sudo cryptsetup close disk_image_$<
+	sudo losetup -d $$(readlink disk_image_$< | sed 's/p1$//')
 
 # Build the erofs image
 %.raw: $$(shell find $$(subst _,/,%))
