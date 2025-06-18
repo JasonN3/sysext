@@ -29,9 +29,9 @@ encrypted/%: % encrypted keyfile
 	# Disk size + LUKS + GPT
 	fallocate -l $$(( $($<_SIZE) + 16777216 + 34816)) $@
 	sudo parted --align opt $@ mklabel gpt
-	sudo parted --align opt $@ mkpart primary 0% 100%
-	# Set type Root Partition (x86-64)
-	sudo parted $@ type 1 4f68bce3-e8cd-4db1-96e7-fbcaf984b709
+	sudo parted --align opt $@ mkpart sysext-usr 0% 100%
+	# Set type Linux filesystem
+	sudo parted $@ type 1 0FC63DAF-8483-4772-8E79-3D69D8477DE4
 	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image_$<
 	#sudo dd if=/dev/zero of=$$(readlink disk_image_$<) bs=1M count=10 status=progress
 	#sudo cryptsetup -q luksFormat $$(readlink disk_image_$<) keyfile
