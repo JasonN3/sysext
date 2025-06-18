@@ -27,7 +27,7 @@ encrypted/%: % encrypted keyfile
 	@echo Encrypting $@
 	$(eval $<_SIZE := $(shell stat -c %s $<))
 	# Disk size + LUKS + GPT
-	fallocate -l $$(( $($<_SIZE) + 16777216 + 16384 + 2014)) $@
+	fallocate -l $$(( $($<_SIZE) + 16777216 + 30686)) $@
 	sudo parted $@ mklabel gpt
 	sudo parted $@ mkpart primary 0% 100%
 	sudo parted $@ print
