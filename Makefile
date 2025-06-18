@@ -30,8 +30,10 @@ encrypted/%: % encrypted keyfile
 	fallocate -l $$(( $($<_SIZE) + 16777216 + 16384 + 2014)) $@
 	sudo parted $@ mklabel gpt
 	sudo parted $@ mkpart primary 0% 100%
+	sudo parted $@ print
 	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image_$<
 	sudo dd if=/dev/zero of=$$(readlink disk_image_$<) status=progress || true
+	lsblk -b
 	sudo cryptsetup -q luksFormat $$(readlink disk_image_$<) keyfile
 	sudo cryptsetup -d keyfile open $$(readlink disk_image_$<) $(subst .raw,,$<)
 	sudo dd if=$($<) of=/dev/mapper/$(subst .raw,,$<) status=progress
