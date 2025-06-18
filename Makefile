@@ -33,11 +33,11 @@ encrypted/%: % encrypted keyfile
 	# Set type Linux filesystem
 	sudo parted $@ type 1 0FC63DAF-8483-4772-8E79-3D69D8477DE4
 	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image_$<
-	#sudo dd if=/dev/zero of=$$(readlink disk_image_$<) bs=1M count=10 status=progress
-	#sudo cryptsetup -q luksFormat $$(readlink disk_image_$<) keyfile
-	#sudo cryptsetup -d keyfile open $$(readlink disk_image_$<) $(subst .raw,,$<)
-	sudo dd if=$< of=$$(readlink disk_image_$<) status=progress
-	#sudo cryptsetup close $(subst .raw,,$<)
+	sudo dd if=/dev/zero of=$$(readlink disk_image_$<) bs=1M count=10 status=progress
+	sudo cryptsetup -q luksFormat $$(readlink disk_image_$<) keyfile
+	sudo cryptsetup -d keyfile open $$(readlink disk_image_$<) $(subst .raw,,$<)
+	sudo dd if=$< of=/dev/mapper/$(subst .raw,,$<) status=progress
+	sudo cryptsetup close $(subst .raw,,$<)
 	sudo losetup -d $$(readlink disk_image_$< | sed 's/p1$$//')
 	rm disk_image_$<
 
