@@ -27,17 +27,15 @@ encrypted/%: % encrypted keyfile
 	@echo Encrypting $@
 	$(eval $<_SIZE := $(shell stat -c %s $<))
 	# Disk size + LUKS + GPT
-	fallocate -l $$(( $($<_SIZE) + 16777216 + 16350)) $@
+	fallocate -l $$(( $($<_SIZE) + 16777216 + 16384)) $@
 	sudo parted $@ mklabel gpt
 	sudo parted $@ mkpart primary 0% 100%
 	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image_$<
-	ls -l disk_image_$<
-	ls -l /dev/loop*
-	sudo dd if=/dev/zero if=disk_image_$< status=progress
-	sudo cryptsetup -q luksFormat disk_image_$< keyfile
-	sudo cryptsetup -d keyfile open disk_image_$< $(subst .raw,,$<)
+	sudo dd if=/dev/zero if=$$(readlink disk_image_$<) status=progress
+	sudo cryptsetup -q luksFormat $$(readlink disk_image_$<) keyfile
+	sudo cryptsetup -d keyfile open $$(readlink disk_image_$<) $(subst .raw,,$<)
 	sudo dd if=$($<) of=/dev/mapper/$(subst .raw,,$<) status=progress
-	sudo cryptsetup close disk_image_$<
+	sudo cryptsetup close $$(readlink disk_image_$<)
 	sudo losetup -d $$(readlink disk_image_$< | sed 's/p1$//')
 
 # Build the erofs image
