@@ -32,6 +32,7 @@ encrypted/%: % encrypted keyfile
 	sudo parted $@ mkpart primary 0% 100%
 	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image_$<
 	ls -l disk_image_$<
+	ls -l /dev/loop*
 	sudo cryptsetup -q luksFormat disk_image_$< keyfile
 	sudo cryptsetup -d keyfile open disk_image_$< $(subst .raw,,$<)
 	sudo dd if=$($<) of=/dev/mapper/$(subst .raw,,$<) status=progress
