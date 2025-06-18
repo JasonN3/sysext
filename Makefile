@@ -26,11 +26,16 @@ keyfile:
 encrypted/%: % encrypted keyfile
 	@echo Encrypting $@
 	$(eval $<_SIZE := $(shell stat -c %s $<))
-	fallocate -l $$(( $($<_SIZE) + 16777216)) $@
-	cryptsetup -q luksFormat $@ keyfile
-	sudo cryptsetup -d keyfile open $@ $(subst .raw,,$(subst encrypted/,,$@))
-	sudo dd if=$(subst encrypted/,,$@) of=/dev/mapper/$(subst .raw,,$(subst encrypted/,,$@)) status=progress
-	sudo cryptsetup close $(subst .raw,,$(subst encrypted/,,$@))
+	# Disk size + LUKS + GPT
+	fallocate -l $$(( $($<_SIZE) + 16777216 + 16384)) $@
+	parted $@ mklabel gpt
+	parted $@ mkpart primary 0% 100%
+	$(eval DISK := $(shell sudo losetup -P --show -f $@))
+	cryptsetup -q luksFormat $(DISK)p1 keyfile
+	sudo cryptsetup -d keyfile open $(DISK)p1 $(subst .raw,,$<)
+	sudo dd if=$($<) of=/dev/mapper/$(subst .raw,,$<) status=progress
+	sudo cryptsetup close $(DISK)p1
+	sudo losetup -d $(DISK)
 
 # Build the erofs image
 %.raw: $$(shell find $$(subst _,/,%))
