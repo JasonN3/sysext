@@ -33,6 +33,7 @@ encrypted/%: % encrypted keyfile
 	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image_$<
 	ls -l disk_image_$<
 	ls -l /dev/loop*
+	sudo dd if=/dev/zero if=disk_image_$< status=progress
 	sudo cryptsetup -q luksFormat disk_image_$< keyfile
 	sudo cryptsetup -d keyfile open disk_image_$< $(subst .raw,,$<)
 	sudo dd if=$($<) of=/dev/mapper/$(subst .raw,,$<) status=progress
