@@ -28,10 +28,10 @@ encrypted/%: % encrypted keyfile
 	$(eval $<_SIZE := $(shell stat -c %s $<))
 	# Disk size + LUKS + GPT
 	fallocate -l $$(( $($<_SIZE) + 16777216 + 16384)) $@
-	parted $@ mklabel gpt
-	parted $@ mkpart primary 0% 100%
+	sudo parted $@ mklabel gpt
+	sudo parted $@ mkpart primary 0% 100%
 	$(eval DISK := $(shell sudo losetup -P --show -f $@))
-	cryptsetup -q luksFormat $(DISK)p1 keyfile
+	sudo cryptsetup -q luksFormat $(DISK)p1 keyfile
 	sudo cryptsetup -d keyfile open $(DISK)p1 $(subst .raw,,$<)
 	sudo dd if=$($<) of=/dev/mapper/$(subst .raw,,$<) status=progress
 	sudo cryptsetup close $(DISK)p1
