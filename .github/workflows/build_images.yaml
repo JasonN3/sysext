@@ -51,7 +51,6 @@ jobs:
           aws s3 cp latest s3://sysext/dev/latest --endpoint-url ${{ secrets.S3_URL }}
           for file in $(ls encrypted/)
           do
-            mv encrypted/${file} encrypted/${file%.raw}_${latest}.raw
-            aws s3 cp encrypted/${file%.raw}_${latest}.raw s3://sysext/dev --endpoint-url ${{ secrets.S3_URL }}
+            aws s3 cp encrypted/${file} s3://sysext/dev/${file%.raw}_${latest}.raw --endpoint-url ${{ secrets.S3_URL }}
           done
           
