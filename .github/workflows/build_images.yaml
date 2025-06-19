@@ -33,3 +33,30 @@ jobs:
         with:
           name: images
           path: encrypted/*.raw
+
+      - name: Setup AWS CLI
+        run: |
+          mkdir -p ~/.aws
+          cat << EOF > ~/.aws/credentials
+          [default] 
+          aws_access_key_id = ${{ secrets.ACCESS_KEY }}
+          aws_secret_access_key = ${{ secrets.SECRET_KEY }}
+          EOF
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp s3://sysext/dev/latest latest --endpoint-url ${{ secrets.S3_URL }}
+          aws s3 cp s3://sysext/dev/SHA256SUMS SHA256SUMS --endpoint-url ${{ secrets.S3_URL }}
+          latest=$(($(cat latest) + 1))
+          echo ${latest} > latest
+          aws s3 cp latest s3://sysext/dev/latest --endpoint-url ${{ secrets.S3_URL }}
+          cd encrypted
+          for file in $(ls)
+          do
+            mv ${file} ${file%.raw}_${latest}.raw
+            sha256sum ${file%.raw}_${latest}.raw >> ../SHA256SUMS
+            aws s3 cp ${file%.raw}_${latest}.raw s3://sysext/dev/${file%.raw}_${latest}.raw --endpoint-url ${{ secrets.S3_URL }}
+          done
+          aws s3 cp ../SHA256SUMS s3://sysext/dev/SHA256SUMS --endpoint-url ${{ secrets.S3_URL }}
+          
+          

@@ -1,55 +1,66 @@
-DIRECTORIES := $(patsubst %/,%,$(sort $(dir $(wildcard */*))))
-TYPES := conf sys service
-IMAGES := $(foreach dir,$(foreach type,$(TYPES),$(subst /,_,$(wildcard $(DIRECTORIES)/$(type)))),$(dir).raw)
+# app
+APPS := $(filter-out build,$(patsubst %/,%,$(sort $(dir $(wildcard */*)))))
+# app.raw
+IMAGES := $(foreach app,$(APPS),$(app).raw)
+OS_IMAGE := ghcr.io/jasonn3/fedora_base
+OS_VERSION := main
+ARCH := $(shell uname -m)
 
-.PHONY: all $(DIRECTORIES) encrypt prereqs clean
+.PHONY: all $(APPS) encrypt prereqs clean
 .SECONDEXPANSION:
 
 # Build all images
-all: $(IMAGES)
+all: $(APPS)
 
 # Build all images related to service
-$(DIRECTORIES): % : $(foreach type,$(TYPES),$(filter %_$(type).raw, $(IMAGES)))
+$(APPS): % : %.raw
 
 # Build and encrypt images
 encrypt: $(foreach image,$(IMAGES),encrypted/$(image))
 
-# Create encrypted directory
-encrypted:
-	mkdir -p encrypted
-
 # Write keyfile
 keyfile:
+	@echo Writing keyfile
 	@echo -n '${ENCRYPT_KEY}' > keyfile
 
 # Encrypt built image
-encrypted/%: % encrypted keyfile
-	@echo Encrypting $@
+encrypted/%: % keyfile
+	$( eval $<_APP := $(patsubst %.raw,%,$<))
+	@echo Encrypting $<
+	[[ -d encrypted ]] || mkdir encrypted
 	$(eval $<_SIZE := $(shell stat -c %s $<))
-	# Disk size + LUKS + GPT
-	fallocate -l $$(( $($<_SIZE) + 16777216 + 34816)) $@
-	sudo parted --align opt $@ mklabel gpt
-	sudo parted --align opt $@ mkpart sysext-usr 0% 100%
-	# Set type Linux filesystem
-	sudo parted $@ type 1 0FC63DAF-8483-4772-8E79-3D69D8477DE4
-	ln -s $$(sudo losetup -P --show -f $@)p1 disk_image_$<
-	#sudo dd if=/dev/zero of=$$(readlink disk_image_$<) bs=1M count=10 status=progress
-	#sudo cryptsetup -q luksFormat $$(readlink disk_image_$<) keyfile
-	#sudo cryptsetup -d keyfile open $$(readlink disk_image_$<) $(subst .raw,,$<)
-	sudo dd if=$< of=$$(readlink disk_image_$<) status=progress
-	#sudo cryptsetup close $(subst .raw,,$<)
-	sudo losetup -d $$(readlink disk_image_$< | sed 's/p1$$//')
-	rm disk_image_$<
+	# Disk size + LUKS (16Mib)
+	fallocate -l $$(( $($<_SIZE) + 16777216)) $@
+	sudo cryptsetup -q luksFormat $@ keyfile
+	sudo cryptsetup -d keyfile open $@ $($<_APP)
+	sudo dd if=$< of=/dev/mapper/$($<_APP) status=progress
+	sudo cryptsetup close $($<_APP)
 
 # Build the erofs image
-%.raw: $$(shell find $$(subst _,/,%))
-	$(eval $@_SOURCE := $(subst _,/,$(subst .raw,,$@)))
-	@echo "Making $@ with source $($@_SOURCE)"
-	mkfs.erofs $@ $($@_SOURCE)
+%.raw: build/% $$(shell find % -type f)
+	$(eval $@_APP := $(patsubst %.raw,%,$@))
+	@echo "Making $@ with source build/$($@_APP)"
+	if [[ -d $($@_APP)/rootfs/opt ]]; then rsync -rmlp $($@_APP)/rootfs/opt build/$($@_APP)/; fi
+	if [[ -d $($@_APP)/rootfs/usr ]]; then rsync -rmlp $($@_APP)/rootfs/usr build/$($@_APP)/; fi
+	if [[ -d $($@_APP)/rootfs/etc ]]; then rsync -rmlp $($@_APP)/rootfs/etc build/$($@_APP)/; fi
+	mkfs.erofs -d3 $@ build/$($@_APP)
+
+# Build system extension files
+build/%: rsync-etc.exclude rsync-opt.exclude rsync-usr.exclude
+	@echo Building $@ filesystem
+	$(eval $(subs /,_,$@)_APP := $(patsubst build/%,%,$@))
+	mkdir -p $@
+	podman run --name make-$($(subs /,_,$@)_APP) $(OS_IMAGE):$(OS_VERSION) dnf install -y $$(cat $($(subs /,_,$@)_APP)/packages | tr '\n' ' ')
+	ln -s $$(podman inspect make-$($(subs /,_,$@)_APP) | jq -r '.[].GraphDriver.Data.UpperDir') $@_upper
+	if [[ -d $@_upper/opt ]]; then rsync -rmlp --exclude-from=rsync-opt.exclude $@_upper/opt $@/; fi
+	if [[ -d $@_upper/usr ]]; then rsync -rmlp --exclude-from=rsync-usr.exclude $@_upper/usr $@/; fi
+	if [[ -d $@_upper/etc ]]; then rsync -rmlp --exclude-from=rsync-etc.exclude $@_upper/etc $@/; fi
+	podman rm make-$($(subs /,_,$@)_APP)
+	rm $@_upper
 
 # Install prerequisites
 prereqs:
-	apt install -y erofs-utils cryptsetup-bin
+	apt install -y erofs-utils cryptsetup-bin jq
 
 # Clean up generated files
 clean:
@@ -57,3 +68,5 @@ clean:
 	rm -Rf output
 	rm -Rf encrypted
 	rm -f keyfile
+	rm -Rf build
+	podman rm -i $(foreach app,$(APPS),make-$(app))
