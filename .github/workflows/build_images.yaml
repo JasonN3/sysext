@@ -46,11 +46,17 @@ jobs:
       - name: Upload to S3
         run: |
           aws s3 cp s3://sysext/dev/latest latest --endpoint-url ${{ secrets.S3_URL }}
+          aws s3 cp s3://sysext/dev/SHA256SUMS SHA256SUMS --endpoint-url ${{ secrets.S3_URL }}
           latest=$(($(cat latest) + 1))
           echo ${latest} > latest
           aws s3 cp latest s3://sysext/dev/latest --endpoint-url ${{ secrets.S3_URL }}
-          for file in $(ls encrypted/)
+          cd encrypted
+          for file in $(ls)
           do
-            aws s3 cp encrypted/${file} s3://sysext/dev/${file%.raw}_${latest}.raw --endpoint-url ${{ secrets.S3_URL }}
+            mv ${file} ${file%.raw}_${latest}.raw
+            sha256sum ${file%.raw}_${latest}.raw >> ../SHA256SUMS
+            aws s3 cp  s3://sysext/dev/${file%.raw}_${latest}.raw --endpoint-url ${{ secrets.S3_URL }}
           done
+          aws s3 cp ../SHA256SUMS s3://sysext/dev/SHA256SUMS --endpoint-url ${{ secrets.S3_URL }}
+          
           
