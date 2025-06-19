@@ -35,11 +35,13 @@ jobs:
           path: encrypted/*.raw
 
       - name: Setup AWS CLI
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.SECRET_KEY }}
-          aws-region: us-east-1
+        run: |
+          mkdir -p ~/.aws
+          cat << EOF > ~/.aws/credentials
+          [default] 
+          aws_access_key_id = ${{ secrets.ACCESS_KEY }}
+          aws_secret_access_key = ${{ secrets.SECRET_KEY }}
+          EOF
 
       - name: Upload to S3
         run: |
