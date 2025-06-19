@@ -55,7 +55,7 @@ jobs:
           do
             mv ${file} ${file%.raw}_${latest}.raw
             sha256sum ${file%.raw}_${latest}.raw >> ../SHA256SUMS
-            aws s3 cp  s3://sysext/dev/${file%.raw}_${latest}.raw --endpoint-url ${{ secrets.S3_URL }}
+            aws s3 cp ${file%.raw}_${latest}.raw s3://sysext/dev/${file%.raw}_${latest}.raw --endpoint-url ${{ secrets.S3_URL }}
           done
           aws s3 cp ../SHA256SUMS s3://sysext/dev/SHA256SUMS --endpoint-url ${{ secrets.S3_URL }}
           
